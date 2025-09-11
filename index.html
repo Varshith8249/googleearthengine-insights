@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Google Earth Engine Insights</title>
+  <meta name="description" content="Visualize and analyze satellite data with Google Earth Engine">
+
+  <link rel="icon" href="https://www.google.com/favicon.ico" type="image/x-icon">
+
+  <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' https: data: blob:;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval'
+        https://*.google.com https://*.googleapis.com
+        https://accounts.google.com https://www.gstatic.com
+        https://*.gstatic.com https://*.googleusercontent.com
+        https://cdn.tailwindcss.com https://unpkg.com
+        https://cdnjs.cloudflare.com https://cdn.jsdelivr.net
+        https://apis.google.com https://earthengine.googleapis.com
+        https://ajax.googleapis.com;
+      style-src 'self' 'unsafe-inline' https:;
+      img-src 'self' https: data: blob:;
+      font-src 'self' https: data:;
+      connect-src 'self' https://accounts.google.com
+        https://*.googleapis.com https://earthengine.googleapis.com https://content-earthengine.googleapis.com;
+      frame-src 'self' https://accounts.google.com
+        https://content-earthengine.googleapis.com https://www.google.com
+        https://*.googleusercontent.com;
+      object-src 'none';
+    ">
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Space Grotesk', 'sans-serif'],
+          },
+          colors: {
+            primary: { /* Neon Green */ 300: '#99f6e4', 400: '#34d399', 500: '#10b981', 600: '#059669', },
+            secondary: { /* Neon Purple/Magenta */ 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', },
+            dark: { 800: '#111827', 900: '#030712', }
+          },
+          animation: {
+            'spin-slow': 'spin 2s linear infinite',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          boxShadow: {
+            'glow-primary': '0 0 15px theme(colors.primary.500 / 0.5), 0 0 5px theme(colors.primary.500 / 0.6)',
+            'glow-secondary': '0 0 15px theme(colors.secondary.500 / 0.5), 0 0 5px theme(colors.secondary.500 / 0.6)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body class="bg-dark-900 text-slate-300">
+  <div class="min-h-screen flex flex-col">
+    <header class="bg-dark-900/50 backdrop-blur-sm border-b border-slate-800/50 sticky top-0 z-40">
+      <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex items-center">
+            <div class="flex-shrink-0 flex items-center">
+              <i class="fas fa-satellite-dish text-primary-400 text-xl lg:text-2xl mr-3 animate-pulse-slow"></i>
+              <h1 class="text-xl lg:text-2xl font-heading font-bold text-slate-100">
+                <span class="text-primary-400">Google</span> Earth Engine
+                <span class="text-secondary-400/80 font-light">Insights</span>
+              </h1>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <button id="mobileSidebarToggle" aria-label="Toggle sidebar" class="lg:hidden flex items-center justify-center p-2 rounded-md bg-slate-700/50 text-slate-300 mr-2">
+              <i class="fas fa-bars"></i>
+            </button>
+            <button id="signInBtn" class="flex items-center gap-2 px-3 py-1.5 lg:px-4 lg:py-2 rounded-md bg-primary-500 hover:bg-primary-600 text-white font-medium transition-all duration-300 hover:shadow-glow-primary text-sm lg:text-base">
+              <i class="fas fa-sign-in-alt text-xs lg:text-base"></i>
+              <span>Sign in</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-grow">
+      <div class="relative">
+        <aside id="leftSidebar" class="fixed top-16 bottom-0 left-0 z-30 w-80 lg:w-96 p-4 flex flex-col gap-6 overflow-y-auto transition-transform duration-300 ease-in-out bg-dark-900/90 backdrop-blur-sm lg:bg-dark-900/100 lg:backdrop-blur-none border-r border-slate-800 -translate-x-full lg:translate-x-0">
+          
+          <div class="card-cyber flex-shrink-0">
+            <h3 class="card-title"><i class="fas fa-sliders text-primary-400"></i><span> Analysis Parameters</span></h3>
+            <div class="space-y-4 mt-4">
+              <div class="form-group">
+                <label for="dataset" class="form-label">1. Select Dataset</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-layer-group input-icon"></i>
+                  <select id="dataset" class="form-input-transparent">
+                    <option value="S2">Sentinel-2 SR (NDVI)</option>
+                    <option value="S2_NDWI">Sentinel-2 (NDWI - Moisture)</option>
+                    <option value="L8">Landsat 8 SR (NDVI)</option>
+                    <option value="VIIRS">VIIRS Nighttime Lights</option>
+                    <option value="CHIRPS">CHIRPS Precipitation</option>
+                    <option value="SMAP">SMAP Soil Moisture</option>
+                    <option value="LST">MODIS Land Surface Temp.</option>
+                    <option value="MODIS_SNOW">MODIS Daily Snow Cover</option>
+                    <option value="JRC_WATER">JRC Surface Water</option>
+                    <option value="MODIS">MODIS NDVI (Global)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">2. Define Date Range</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="input-wrapper">
+                    <i class="fas fa-calendar-alt input-icon"></i>
+                    <input id="startDate" type="date" class="form-input-transparent" />
+                  </div>
+                  <div class="input-wrapper">
+                    <i class="fas fa-calendar-alt input-icon"></i>
+                    <input id="endDate" type="date" class="form-input-transparent" />
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">3. Select Area of Interest</label>
+                <div class="grid grid-cols-2 gap-2">
+                  <button id="drawBtn" class="btn-glass"><i class="fas fa-draw-polygon"></i><span> Draw</span></button>
+                  <button id="clearBtn" aria-label="Clear selected area" class="btn-glass"><i class="fas fa-trash-alt"></i><span> Clear</span></button>
+                </div>
+                <div id="areaName" class="text-xs mt-2 text-slate-400 h-4">No area selected</div>
+              </div>
+              
+              <button id="analyzeBtn" class="btn-primary w-full mt-2">
+                <i class="fas fa-chart-line"></i>
+                <span id="analyzeBtnText">Analyze</span>
+                <span id="analyzeSpinner" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="card-cyber flex-shrink-0">
+            <h3 class="card-title"><i class="fas fa-chart-pie text-primary-400"></i><span> Quick Stats</span></h3>
+            <div id="statsSkeleton" class="space-y-4 mt-4 animate-pulse">
+              <div class="space-y-2"><div class="h-3 bg-slate-700 rounded w-24"></div><div class="h-5 bg-slate-700 rounded w-32"></div></div>
+              <div class="space-y-2"><div class="h-3 bg-slate-700 rounded w-20"></div><div class="h-5 bg-slate-700 rounded w-36"></div></div>
+            </div>
+            <div id="statsContent" class="hidden grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <p class="text-sm text-slate-400">Average Value</p>
+                <p class="text-xl font-semibold text-slate-100"><span id="avgNdvi">–</span></p>
+              </div>
+              <div>
+                <p class="text-sm text-slate-400">Area Size</p>
+                <p class="text-xl font-semibold text-slate-100"><span id="areaSize">–</span></p>
+              </div>
+            </div>
+            <br>
+            <hr class="hr-glow" />
+            <br>
+            <button id="downloadPng" class="btn-glass w-full">
+                <i class="fas fa-download"></i><span> Download Report</span>
+            </button>
+          </div>
+        </aside>
+
+        <button id="sidebarToggle" aria-label="Toggle sidebar" class="fixed top-1/2 -translate-y-1/2 z-40 bg-slate-800/80 backdrop-blur-sm p-2 rounded-r-lg shadow-lg transition-all duration-300 ease-in-out left-0 lg:left-96 border-y border-r border-slate-700">
+          <i id="sidebarToggleIcon" class="fas fa-chevron-left text-primary-400 transition-transform duration-300 text-xl w-6 text-center"></i>
+        </button>
+        
+        <div id="mainContentWrapper" class="transition-all duration-300 ease-in-out ml-0 lg:ml-96">
+          <div id="mainContent" class="p-4 lg:p-6">
+            <div id="gridContainer" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <section class="lg:col-span-2 space-y-6">
+                <div id="mapCard" class="card-cyber overflow-hidden relative"> 
+                  <div class="p-4 border-b border-slate-800/50 flex justify-between items-center">
+                    <h3 id="mapTitle" class="card-title"><i class="fas fa-map text-primary-400"></i><span> Map View</span></h3>
+                  </div>
+                  <div id="map" class="bg-dark-800"></div>
+                  <div id="legend" class="p-4 border-t border-slate-800/50 min-h-[52px]"></div>
+
+                  <div id="mapInspector" class="map-inspector">
+                    <span id="inspectorValue">--</span>
+                    <span id="inspectorLabel">value</span>
+                  </div>
+                </div>
+                <div id="areaChartCard" class="card-cyber">
+                  <h3 class="card-title"><i class="fas fa-chart-bar text-primary-400"></i><span> Area Composition</span></h3>
+                  <div class="relative h-64 mt-4"><canvas id="areaChart"></canvas></div>
+                </div>
+              </section>
+
+              <aside class="lg:col-span-1 space-y-6">
+                <div class="card-cyber">
+                  <h3 class="card-title"><i class="fas fa-chart-line text-secondary-400"></i><span> Temporal Trend</span></h3>
+                  <div class="relative h-64 mt-4"><canvas id="trendChart"></canvas></div>
+                </div>
+                <div class="card-cyber">
+                  <h3 class="card-title"><i class="fas fa-info-circle text-secondary-400"></i><span> Dataset Info</span></h3>
+                  <div id="datasetInfo" class="text-sm text-slate-400 space-y-2 mt-4 h-64 overflow-y-auto">
+                    <p>Select a dataset to view information about its resolution, availability, and usage.</p>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toastContainer" class="fixed bottom-4 right-4 space-y-2 z-50"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@google/earthengine@0.1.352/build/ee_api_js.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>

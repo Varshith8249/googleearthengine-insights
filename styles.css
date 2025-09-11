@@ -1,0 +1,208 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* NEW: Cross-browser scrollbar styling */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: theme(colors.primary.500) theme(colors.slate.800);
+  }
+
+  body {
+    @apply font-sans antialiased text-slate-300 bg-dark-900;
+    background-image:
+      linear-gradient(theme(colors.primary.500 / 0.05) 1px, transparent 1px),
+      linear-gradient(to right, theme(colors.primary.500 / 0.05) 1px, transparent 1px);
+    background-size: 2rem 2rem;
+  }
+
+  /* Custom WebKit Scrollbar (for Chrome, Edge, Safari) */
+  ::-webkit-scrollbar { @apply w-2 h-2; }
+  ::-webkit-scrollbar-track { 
+    background-color: #1e293b; /* slate-800 */
+  }
+  ::-webkit-scrollbar-thumb { @apply bg-primary-500 rounded-full border-2 border-slate-800; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-primary-400; }
+
+  /* Remove default appearance from date inputs */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+}
+
+@layer components {
+  /* --- Card Style with Cyber Corners --- */
+  .card-cyber {
+    @apply bg-slate-900/50 backdrop-blur-sm rounded-lg border border-slate-800 p-4 transition-all duration-300 relative;
+  }
+  .card-cyber:hover {
+    @apply border-slate-700;
+    transform: translateY(-4px);
+    box-shadow: 0 0 20px theme(colors.slate.900 / 0.5);
+  }
+
+  /* Cyber corner pseudo-elements */
+  .card-cyber::before,
+  .card-cyber::after {
+    content: '';
+    position: absolute;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-style: solid;
+    border-color: theme(colors.primary.500 / 0.4);
+    transition: all 0.3s ease-in-out;
+    pointer-events: none;
+  }
+  .card-cyber::before {
+    top: -1px;
+    left: -1px;
+    border-width: 2px 0 0 2px;
+    border-top-left-radius: 0.5rem;
+  }
+  .card-cyber::after {
+    bottom: -1px;
+    right: -1px;
+    border-width: 0 2px 2px 0;
+    border-bottom-right-radius: 0.5rem;
+  }
+  .card-cyber:hover::before,
+  .card-cyber:hover::after {
+    border-color: theme(colors.primary.400);
+    width: calc(100% + 2px);
+    height: calc(100% + 2px);
+  }
+
+  .card-title {
+    @apply font-heading font-semibold text-slate-100 flex items-center gap-2 text-lg;
+  }
+
+  /* --- Form Styles --- */
+  .form-group {
+    @apply w-full;
+  }
+  .form-label {
+    @apply block text-sm font-semibold text-slate-300 mb-2;
+  }
+  .input-wrapper {
+    @apply relative flex items-center w-full rounded-md bg-slate-900/70 border border-slate-700 shadow-inner;
+    @apply transition-all duration-300 focus-within:border-primary-400 focus-within:ring-2 focus-within:ring-primary-400/50;
+  }
+  .input-icon {
+    @apply absolute left-3 text-slate-500 pointer-events-none transition-colors duration-300;
+  }
+  .input-wrapper:focus-within .input-icon {
+     @apply text-primary-400;
+  }
+  .form-input-transparent {
+    @apply w-full bg-transparent border-none py-2 pl-10 pr-3 text-sm text-slate-200 focus:outline-none focus:ring-0;
+  }
+  /* Specific styling for select dropdown arrow */
+  select.form-input-transparent {
+    @apply appearance-none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+
+  /* --- BUTTON STYLES --- */
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-primary-500 text-white font-semibold shadow-sm transition-all duration-300;
+    @apply hover:bg-primary-600 hover:shadow-glow-primary disabled:bg-slate-600 disabled:text-slate-400 disabled:cursor-not-allowed disabled:shadow-none;
+  }
+  .btn-glass {
+    @apply flex items-center justify-center gap-2 px-3 py-2 rounded-md font-semibold;
+    @apply bg-slate-700/30 border border-slate-600/50 text-slate-300 backdrop-blur-sm;
+    @apply hover:bg-slate-700/50 hover:border-secondary-400 hover:text-secondary-400 transition-all duration-300;
+    @apply disabled:bg-slate-800 disabled:border-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed disabled:hover:border-slate-700;
+  }
+
+  /* Pulsing glow effect for user guidance */
+  .btn-guidance {
+    animation: pulse-shadow 2.5s ease-in-out infinite;
+  }
+
+  /* Themed horizontal ruler */
+  .hr-glow {
+    @apply border-0 h-px bg-slate-700/50 my-4;
+    box-shadow: 0 0 10px theme(colors.slate.800);
+  }
+
+  /* Legend styling */
+  .legend-palette { @apply flex gap-2 flex-wrap; }
+  .legend-item {
+    @apply flex items-center gap-2 text-xs px-2.5 py-1 rounded-full;
+    @apply bg-dark-800/80 border border-slate-700;
+  }
+  .legend-swatch { @apply w-3 h-3 rounded-full border border-slate-600; }
+
+  /* Toast notifications */
+  .toast {
+    @apply flex items-center gap-3 px-4 py-3 rounded-md shadow-lg text-sm font-medium bg-slate-800/80 backdrop-blur-sm border border-slate-700 text-slate-100;
+    animation: toast-in 0.3s ease-out forwards;
+  }
+  .toast.toast-out { animation: toast-out 0.3s ease-in forwards; }
+  .toast-success { @apply border-l-4 border-green-500; }
+  .toast-error { @apply border-l-4 border-red-500; }
+  .toast-warning { @apply border-l-4 border-amber-500; }
+
+  /* Map loader */
+  .map-loader {
+    @apply absolute inset-0 bg-dark-900/50 backdrop-blur-sm flex items-center justify-center z-20;
+  }
+  
+  /* NEW: Map Inspector Popup */
+  .map-inspector {
+    @apply absolute top-2 right-24 z-10 bg-slate-900/70 backdrop-blur-sm border border-slate-700 rounded-lg shadow-lg p-2 text-xs text-slate-200 transition-opacity duration-200;
+    pointer-events: none; /* important */
+    opacity: 0;
+  }
+  .map-inspector.visible {
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  /* Leaflet Draw Toolbar Overrides */
+  .leaflet-draw-toolbar {
+    @apply bg-slate-800/80 backdrop-blur-sm border border-slate-700 rounded-lg shadow-lg !important;
+  }
+  .leaflet-draw-toolbar a {
+    @apply !bg-transparent text-slate-200 !important;
+  }
+  .leaflet-draw-toolbar a:hover {
+    @apply !bg-primary-500/30 !important;
+  }
+  .leaflet-draw-actions a {
+    @apply !text-base !important;
+  }
+
+  /* NEW: Style to dim content during analysis */
+  .is-analyzing > * {
+    @apply opacity-40 transition-opacity duration-300 pointer-events-none;
+  }
+
+  /* Animations */
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(20px); }
+  }
+  /* Keyframe for the pulsating shadow effect */
+  @keyframes pulse-shadow {
+    0%, 100% { box-shadow: 0 0 15px theme(colors.primary.500 / 0.0), 0 0 5px theme(colors.primary.500 / 0.0); }
+    50% { box-shadow: 0 0 15px theme(colors.primary.500 / 0.5), 0 0 5px theme(colors.primary.500 / 0.6); }
+  }
+
+  /* Responsive map height */
+  #map { height: calc(100vh - 250px); min-height: 400px; }
+  @media (min-width: 1024px) {
+    #map { height: 500px; }
+  }
+}

@@ -599,8 +599,15 @@ async function analyze() {
       });
     });
 
-    const cacheKey = `${datasetKey}-${startDate}-${endDate}-${JSON.stringify(gj.geometry.coordinates)}`;
-    
+    let cacheBands = '';
+    if (ds.supportsBandSelection) {
+        const nirBand = document.getElementById('nirBandSelect').value;
+        const redBand = document.getElementById('redBandSelect').value;
+        cacheBands = `${nirBand}-${redBand}`;
+    }
+
+    const cacheKey = `${datasetKey}-${startDate}-${endDate}-${cacheBands}-${JSON.stringify(gj.geometry.coordinates)}`;
+        
     await Promise.all([
       cachedEeRequest(`stats-${cacheKey}`, () => calculateStats(region, ds, bandName, image)),
       cachedEeRequest(`trend-${cacheKey}`, () => calculateTrend(collection, region, ds, bandName, computeFunction)),

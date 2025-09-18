@@ -149,6 +149,26 @@
                 <span id="analyzeSpinner" class="hidden"><i class="fas fa-circle-notch fa-spin"></i></span>
               </button>
             </div>
+            <div id="bandSelectorContainer" class="hidden space-y-4 border-t border-slate-800/50 pt-4">
+                <p class="form-label -mb-2">Custom Index Bands</p>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="form-group">
+                    <label for="nirBandSelect" class="text-xs text-slate-400 mb-1">NIR / Band 1</label>
+                    <div class="input-wrapper">
+                      <i class="fas fa-wave-square input-icon"></i>
+                      <select id="nirBandSelect" class="form-input-transparent"></select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="redBandSelect" class="text-xs text-slate-400 mb-1">Red / Band 2</label>
+                    <div class="input-wrapper">
+                      <i class="fas fa-wave-square input-icon"></i>
+                      <select id="redBandSelect" class="form-input-transparent"></select>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-500 text-center">Calculates (B1 - B2) / (B1 + B2)</p>
+              </div>
           </div>
           
           <div class="card-cyber flex-shrink-0">

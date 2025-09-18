@@ -11,43 +11,44 @@ const DATASETS = {
     id: 'COPERNICUS/S2_SR',
     vis: {min: 0, max: 1, palette: ['#b8860b', '#ffff66', '#00a65a', '#006837']},
     scale: 20,
-    computeImage: (img) => {
-      const scl = img.select('SCL');
-      const mask = scl.neq(3).and(scl.neq(8)).and(scl.neq(9)).and(scl.neq(10)).and(scl.neq(11));
-      const nir = img.select('B8').multiply(1);
-      const red = img.select('B4').multiply(1);
-      const ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI');
-      return ndvi.updateMask(mask);
-    },
+    // REMOVED: computeImage function is now dynamic
     legend: [
-      {c:'#b8860b', t:'Low'},
-      {c:'#ffff66', t:'Moderate'},
-      {c:'#00a65a', t:'High'},
-      {c:'#006837', t:'Very High'},
+      {c:'#b8860b', t:'Low'}, {c:'#ffff66', t:'Moderate'},
+      {c:'#00a65a', t:'High'}, {c:'#006837', t:'Very High'},
     ],
     supportsNdvi: true,
-    description: 'Sentinel-2 Surface Reflectance provides high-resolution (10-60m) imagery with a revisit time of 5 days. NDVI range: -1 to 1',
-    maxDays: 365
+    description: 'Sentinel-2 Surface Reflectance provides high-resolution (10-60m) imagery with a revisit time of 5 days. You can select custom bands to calculate indices like NDVI.',
+    maxDays: 365,
+    // ADDED: Band selection info
+    supportsBandSelection: true,
+    bands: [
+        { name: 'B8 - NIR', value: 'B8' }, { name: 'B4 - Red', value: 'B4' },
+        { name: 'B3 - Green', value: 'B3' }, { name: 'B11 - SWIR1', value: 'B11' },
+        { name: 'B12 - SWIR2', value: 'B12' }, { name: 'B2 - Blue', value: 'B2' }
+    ],
+    defaultBands: { nir: 'B8', red: 'B4' }
   },
   L8: {
     label: 'Landsat 8 SR (NDVI)',
     id: 'LANDSAT/LC08/C02/T1_L2',
     vis: {min: 0, max: 1, palette: ['#b8860b', '#ffff66', '#00a65a', '#006837']},
     scale: 30,
-    computeImage: (img) => {
-      const scale = 2.75e-05, offset = -0.2;
-      const nir = img.select('SR_B5').multiply(scale).add(offset);
-      const red = img.select('SR_B4').multiply(scale).add(offset);
-      const ndvi = nir.subtract(red).divide(nir.add(red)).rename('NDVI');
-      const qa = img.select('QA_PIXEL');
-      const cloud = qa.bitwiseAnd(1<<3).neq(0);
-      const cloudShadow = qa.bitwiseAnd(1<<4).neq(0);
-      return ndvi.updateMask(cloud.not().and(cloudShadow.not()));
-    },
-    legend: [ {c:'#b8860b', t:'Low'}, {c:'#ffff66', t:'Moderate'}, {c:'#00a65a', t:'High'}, {c:'#006837', t:'Very High'},],
+    // REMOVED: computeImage function is now dynamic
+    legend: [
+      {c:'#b8860b', t:'Low'}, {c:'#ffff66', t:'Moderate'},
+      {c:'#00a65a', t:'High'}, {c:'#006837', t:'Very High'},
+    ],
     supportsNdvi: true,
-    description: 'Landsat 8 Surface Reflectance offers 30m resolution imagery with a 16-day revisit time. NDVI range: -1 to 1',
-    maxDays: 730
+    description: 'Landsat 8 Surface Reflectance offers 30m resolution imagery. You can select custom bands to calculate indices like NDVI.',
+    maxDays: 730,
+    // ADDED: Band selection info
+    supportsBandSelection: true,
+    bands: [
+        { name: 'B5 - NIR', value: 'SR_B5' }, { name: 'B4 - Red', value: 'SR_B4' },
+        { name: 'B3 - Green', value: 'SR_B3' }, { name: 'B6 - SWIR1', value: 'SR_B6' },
+        { name: 'B7 - SWIR2', value: 'SR_B7' }, { name: 'B2 - Blue', value: 'SR_B2' }
+    ],
+    defaultBands: { nir: 'SR_B5', red: 'SR_B4' }
   },
   MODIS: {
     label: 'MODIS NDVI (Terra)',
@@ -223,7 +224,10 @@ function initUI() {
   document.getElementById('clearBtn').addEventListener('click', clearShapes);
   document.getElementById('analyzeBtn').addEventListener('click', analyze);
   document.getElementById('downloadPng').addEventListener('click', downloadPng);
-  document.getElementById('dataset').addEventListener('change', updateDatasetInfo);
+  document.getElementById('dataset').addEventListener('change', () => {
+    updateDatasetInfo();
+    updateBandSelectors(); // Add this call
+  });
   document.getElementById('mobileSidebarToggle').addEventListener('click', () => {
     sidebar.classList.toggle('-translate-x-full');
     setTimeout(() => {
@@ -237,6 +241,7 @@ function initUI() {
 
   document.getElementById('downloadPng').disabled = true;
   updateGuidance();
+  updateBandSelectors();
 }
 
 function updateDatasetInfo() {
@@ -244,6 +249,32 @@ function updateDatasetInfo() {
   const ds = DATASETS[datasetKey];
   const infoEl = document.getElementById('datasetInfo');
   infoEl.innerHTML = `<p class="font-bold text-primary-400">${ds.label}</p><p class="mt-2 text-sm">${ds.description}</p><p class="mt-2 text-xs text-slate-500">Resolution: ${ds.scale}m</p>`;
+}
+
+function updateBandSelectors() {
+  const datasetKey = document.getElementById('dataset').value;
+  const ds = DATASETS[datasetKey];
+  const container = document.getElementById('bandSelectorContainer');
+  const nirSelect = document.getElementById('nirBandSelect');
+  const redSelect = document.getElementById('redBandSelect');
+
+  if (ds.supportsBandSelection) {
+    nirSelect.innerHTML = '';
+    redSelect.innerHTML = '';
+
+    ds.bands.forEach(band => {
+      const optionNir = new Option(band.name, band.value);
+      const optionRed = new Option(band.name, band.value);
+      nirSelect.add(optionNir);
+      redSelect.add(optionRed);
+    });
+
+    nirSelect.value = ds.defaultBands.nir;
+    redSelect.value = ds.defaultBands.red;
+    container.classList.remove('hidden');
+  } else {
+    container.classList.add('hidden');
+  }
 }
 
 function handleWindowResize() {
@@ -499,7 +530,46 @@ async function analyze() {
       throw new Error('No images found');
     }
 
-    let image = collection.map(ds.computeImage);
+    let image;
+    const computeDynamicIndex = (img) => {
+        const nirBand = document.getElementById('nirBandSelect').value;
+        const redBand = document.getElementById('redBandSelect').value;
+        let nir, red;
+
+        // Handle Landsat 8 scaling factors
+        if (datasetKey === 'L8') {
+            const scale = 2.75e-05, offset = -0.2;
+            nir = img.select(nirBand).multiply(scale).add(offset);
+            red = img.select(redBand).multiply(scale).add(offset);
+        } else {
+            nir = img.select(nirBand);
+            red = img.select(redBand);
+        }
+
+        const index = nir.subtract(red).divide(nir.add(red)).rename('NDVI');
+        
+        // Apply dataset-specific cloud masks
+        if (datasetKey === 'S2') {
+            const scl = img.select('SCL');
+            const mask = scl.neq(3).and(scl.neq(8)).and(scl.neq(9)).and(scl.neq(10)).and(scl.neq(11));
+            return index.updateMask(mask);
+        }
+        if (datasetKey === 'L8') {
+            const qa = img.select('QA_PIXEL');
+            const cloud = qa.bitwiseAnd(1 << 3).neq(0);
+            const cloudShadow = qa.bitwiseAnd(1 << 4).neq(0);
+            return index.updateMask(cloud.not().and(cloudShadow.not()));
+        }
+        return index;
+    };
+
+    let computeFunction;
+    if (ds.supportsBandSelection) {
+        computeFunction = computeDynamicIndex;
+    } else {
+        computeFunction = ds.computeImage;
+    }
+    image = collection.map(computeFunction);
     let displayImage = image.median();
     
     const pixelCountDict = await displayImage.reduceRegion({ reducer: ee.Reducer.count(), geometry: region, scale: ds.scale, maxPixels: 1e9 }).getInfo();
@@ -533,7 +603,7 @@ async function analyze() {
     
     await Promise.all([
       cachedEeRequest(`stats-${cacheKey}`, () => calculateStats(region, ds, bandName, image)),
-      cachedEeRequest(`trend-${cacheKey}`, () => calculateTrend(collection, region, ds, bandName)),
+      cachedEeRequest(`trend-${cacheKey}`, () => calculateTrend(collection, region, ds, bandName, computeFunction)),
       ds.supportsNdvi ? cachedEeRequest(`classes-${cacheKey}`, () => calculateNdviClasses(displayImage, region, ds.scale)) : Promise.resolve()
     ]);
 
@@ -595,8 +665,8 @@ async function calculateStats(region, ds, bandName, image) {
     document.getElementById('avgNdvi').textContent = (meanValueClient != null) ? meanValueClient.toFixed(3) : '–';
 }
 
-async function calculateTrend(collection, region, ds, bandName) {
-  const monthly = monthlyTimeSeries(collection, region, ds, bandName);
+async function calculateTrend(collection, region, ds, bandName, computeFunction) {
+  const monthly = monthlyTimeSeries(collection, region, ds, bandName, computeFunction);
   const fc = await monthly.getInfo();
   const labels = fc.features.map(f => f.properties.date);
   const values = fc.features.map(f => f.properties.value);
@@ -612,27 +682,29 @@ async function calculateNdviClasses(image, region, scale) {
 /* =========================
   EARTH ENGINE HELPERS
 ========================= */
-function monthlyTimeSeries(collection, region, ds, bandName) {
-    const start = ee.Date(document.getElementById('startDate').value);
-    const end = ee.Date(document.getElementById('endDate').value);
-    const months = end.difference(start, 'month').floor();
+function monthlyTimeSeries(collection, region, ds, bandName, computeFunction) {
+  const start = ee.Date(document.getElementById('startDate').value);
+  const end = ee.Date(document.getElementById('endDate').value);
+  const months = end.difference(start, 'month').floor();
 
-    const byMonth = ee.List.sequence(0, months).map(m => {
-        const startM = start.advance(ee.Number(m), 'month');
-        const endM = startM.advance(1, 'month');
-        const monthlyColl = collection.filterDate(startM, endM);
-        const size = monthlyColl.size();
-        const mean = ee.Algorithms.If(
-            size.gt(0),
-            ee.Dictionary(
-                monthlyColl.map(ds.computeImage).mean().rename(bandName)
-                .reduceRegion({ reducer: ee.Reducer.mean(), geometry: region, scale: ds.scale, maxPixels: 1e13 })
-            ).get(bandName, null),
-            null
-        );
-        return ee.Feature(null, { date: startM.format('YYYY-MM'), value: mean });
-    });
-    return ee.FeatureCollection(byMonth);
+  const byMonth = ee.List.sequence(0, months).map(m => {
+    const startM = start.advance(ee.Number(m), 'month');
+    const endM = startM.advance(1, 'month');
+    const monthlyColl = collection.filterDate(startM, endM);
+    const size = monthlyColl.size();
+    const mean = ee.Algorithms.If(
+      size.gt(0),
+      ee.Dictionary(
+        // Use the new computeFunction here instead of ds.computeImage
+        monthlyColl.map(computeFunction).mean().rename(bandName)
+        .reduceRegion({ reducer: ee.Reducer.mean(), geometry: region, scale: ds.scale, maxPixels: 1e13 })
+      ).get(bandName, null),
+      null
+    );
+    return ee.Feature(null, { date: startM.format('YYYY-MM'), value: mean });
+  });
+
+  return ee.FeatureCollection(byMonth);
 }
 
 function ndviClasses(image, region, scale) {
